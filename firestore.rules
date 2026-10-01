@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function num(v) { return v is number; }
+
+    match /reports/{id} {
+      allow read: if true;
+
+      // สร้างรายงานใหม่: ต้องล็อกอินแบบไม่ระบุตัวตน และข้อมูลต้องอยู่ในรูปแบบที่แอปส่ง
+      allow create: if signedIn()
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.kind in ['flood', 'crowd']
+        && request.resource.data.level is int
+        && request.resource.data.level >= 1
+        && ((request.resource.data.kind == 'flood' && request.resource.data.level <= 6)
+            || (request.resource.data.kind == 'crowd' && request.resource.data.level <= 3))
+        && num(request.resource.data.lat) && request.resource.data.lat > 13.8 && request.resource.data.lat < 14.4
+        && num(request.resource.data.lng) && request.resource.data.lng > 100.2 && request.resource.data.lng < 101.1
+        && request.resource.data.note is string && request.resource.data.note.size() <= 200
+        && request.resource.data.confirms == 0
+        && request.resource.data.keys().hasOnly(['kind','level','lng','lat','amp','note','place','trend','car','at','lastAt','confirms','by','hasPhoto']);
+
+      // ปุ่ม "ยังเป็นอยู่": เพิ่มยอดยืนยันได้ทีละ 1 และแก้ได้แค่ confirms กับ lastAt
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['confirms','lastAt'])
+        && request.resource.data.confirms == resource.data.confirms + 1;
+
+      // ลบได้เฉพาะรายงานของตัวเอง
+      allow delete: if signedIn() && resource.data.by == request.auth.uid;
+    }
+
+    match /photos/{id} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.img is string
+        && request.resource.data.img.size() < 200000
+        && request.resource.data.img.matches('^data:image/(jpeg|png|webp);base64,.*');
+      allow delete: if signedIn() && resource.data.by == request.auth.uid;
+    }
+  }
+}

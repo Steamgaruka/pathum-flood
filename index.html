@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ปทุมฯ น้ำท่วม-คนแน่น</title>
+<meta name="description" content="แผนที่จุดน้ำท่วมและจุดคนเยอะ จังหวัดปทุมธานี จากรายงานของคนในพื้นที่">
+<meta name="theme-color" content="#0f6fa8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
+<style>
+/* Layout: hydrographic chart on the left, a field-report clipboard on the right; stacks on phones */
+:root{
+  --bg:#eef3f6; --panel:#ffffff; --ink:#122430; --muted:#5a6b78; --line:#cfdbe3;
+  --land:#f7faf9; --land-stroke:#9fb3c0;
+  --w1:#e1f0f7; --w2:#b2daef; --w3:#6db4e2; --w4:#2f86c6; --w5:#1a5ea3; --w6:#0b2f66;
+  --crowd:#d4541f; --crowd-soft:#fbe1d4;
+  --accent:#0f6fa8; --warn:#b8321b; --demo:#8a6d00; --demo-bg:#fff4c7;
+  --display:"Chakra Petch","IBM Plex Sans Thai",system-ui,sans-serif;
+  --body:"IBM Plex Sans Thai",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0c161d; --panel:#13212b; --ink:#e3edf3; --muted:#93a7b5; --line:#24394a;
+  --land:#182a36; --land-stroke:#3d5668;
+  --w1:#183846; --w2:#1d4a63; --w3:#2a6f9c; --w4:#3f97d4; --w5:#7cc3f2; --w6:#c4e8ff;
+  --crowd:#ff8a4d; --crowd-soft:#3a2216;
+  --accent:#6cc0f0; --warn:#ff7a62; --demo:#f0cf5a; --demo-bg:#2e2708; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c161d; --panel:#13212b; --ink:#e3edf3; --muted:#93a7b5; --line:#24394a;
+  --land:#182a36; --land-stroke:#3d5668;
+  --w1:#183846; --w2:#1d4a63; --w3:#2a6f9c; --w4:#3f97d4; --w5:#7cc3f2; --w6:#c4e8ff;
+  --crowd:#ff8a4d; --crowd-soft:#3a2216;
+  --accent:#6cc0f0; --warn:#ff7a62; --demo:#f0cf5a; --demo-bg:#2e2708; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;margin:0;padding:16px}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 20px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(22px,3.4vw,32px);margin:0;line-height:1.15;text-wrap:balance}
+h1 small{display:block;font-family:var(--body);font-weight:500;font-size:14px;color:var(--muted);margin-top:4px}
+.hot{font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 14px}
+.hot b{font-family:var(--display);color:var(--warn);font-size:16px;font-variant-numeric:tabular-nums;user-select:all}
+.grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(300px,1fr);gap:14px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;min-width:0}
+.mapbox{position:relative;overflow:hidden}
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line);align-items:center}
+.chip{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:4px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.chip:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sep{flex:1}
+svg#map{display:block;width:100%;height:auto;aspect-ratio:1000/620;touch-action:none;cursor:crosshair;background:var(--bg)}
+.dist{stroke:var(--land-stroke);stroke-width:1.2;vector-effect:non-scaling-stroke;transition:fill .3s}
+.dist:hover{stroke:var(--ink)}
+.dlabel{font-family:var(--display);font-weight:600;fill:var(--ink);opacity:.75;pointer-events:none;paint-order:stroke;stroke:var(--land);stroke-width:3px}
+.lm{font-size:10px;fill:var(--muted);pointer-events:none}
+.zoom{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;gap:4px}
+.zoom button{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:18px;cursor:pointer}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:3px;display:inline-block;border:1px solid var(--line)}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--panel);font-size:12.5px;padding:6px 9px;border-radius:6px;max-width:240px;transform:translate(-50%,calc(-100% - 12px));opacity:0;transition:opacity .12s}
+.hint{padding:8px 12px;font-size:13px;color:var(--muted);border-bottom:1px solid var(--line)}
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.sec{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.sec h2{font-family:var(--display);font-size:17px;margin:0;font-weight:600}
+.eyebrow{font-size:11.5px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.rank{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rank li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--line);cursor:pointer}
+.rank li:last-child{border-bottom:0}
+.rank .nm{font-weight:600}
+.rank .meta{grid-column:1/-1;font-size:12.5px;color:var(--muted)}
+.pill{font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.banner{background:var(--demo-bg);color:var(--demo);border:1px solid var(--demo);border-radius:8px;padding:8px 12px;font-size:13px}
+.banner button{font:inherit;color:inherit;background:none;border:0;text-decoration:underline;cursor:pointer;padding:0}
+form{display:flex;flex-direction:column;gap:10px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.seg label,.lv label,.lvgrid label,.opt3 label{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:14px}
+.seg input,.lv input{margin-top:4px}
+.seg label:has(input:checked),.lv label:has(input:checked),.lvgrid label:has(input:checked),.opt3 label:has(input:checked){border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.lv{display:flex;flex-direction:column;gap:6px}
+.lvgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.lvgrid label{flex-direction:column;align-items:center;text-align:center;gap:2px;padding:8px 4px;font-size:13px;line-height:1.3}
+.lvgrid input,.opt3 input{position:absolute;opacity:0;pointer-events:none}
+.lvgrid label:has(input:focus-visible),.opt3 label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.lvgrid svg{width:44px;height:48px}
+.sub{font-size:13px;font-weight:600;margin-top:2px}
+.opt3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.opt3 label{justify-content:center;text-align:center;font-size:13px;padding:7px 4px}
+.seg label,.lv label,.lvgrid label,.opt3 label{position:relative}
+.lv small{display:block;color:var(--muted);font-size:12px}
+select,textarea{font:inherit;font-size:14px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);color:var(--ink);width:100%}
+textarea{min-height:56px;resize:vertical}
+.loc{font-size:13px;color:var(--muted)}
+.loc b{color:var(--ink)}
+.primary{font:inherit;font-weight:600;background:var(--accent);color:var(--panel);border:0;border-radius:8px;padding:10px 14px;cursor:pointer}
+.primary:disabled{opacity:.45;cursor:not-allowed}
+.msg{font-size:13px;min-height:1.2em}
+.feed{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;max-height:340px;overflow:auto}
+.feed li{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:13.5px;padding-bottom:8px;border-bottom:1px dashed var(--line)}
+.feed .dot{margin-top:5px}
+.feed .t{color:var(--muted);font-size:12px}
+.feed .acts{grid-column:2;display:flex;gap:10px}
+.feed .acts button{font:inherit;font-size:12px;background:none;border:0;color:var(--accent);cursor:pointer;padding:0}
+.src{font-size:12.5px;color:var(--muted)}
+.src a{color:var(--accent)}
+.tag{font-size:11px;font-weight:600;color:var(--demo);background:var(--demo-bg);border-radius:4px;padding:0 5px;margin-left:4px}
+.photoBtn{display:inline-flex;align-items:center;gap:8px;border:1px dashed var(--land-stroke);border-radius:8px;padding:9px 12px;font-size:14px;cursor:pointer;color:var(--ink)}
+.photoBtn:hover{border-color:var(--accent)}
+#photo:focus-visible + .photoBtn{outline:2px solid var(--accent);outline-offset:2px}
+.prev{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--muted)}
+.prev img{width:84px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--line)}
+.prev button,.linkbtn{font:inherit;font-size:13px;background:none;border:0;color:var(--accent);cursor:pointer;padding:0}
+.thumb{grid-column:2;width:100%;max-width:220px;aspect-ratio:4/3;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--bg);cursor:zoom-in}
+.modal[hidden],#photoPrev[hidden]{display:none}
+.modal{position:fixed;inset:0;background:rgba(6,14,20,.6);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.mcard{background:var(--panel);color:var(--ink);border-radius:12px;max-width:560px;width:100%;max-height:100%;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.mcard img{width:100%;border-radius:8px;background:var(--bg)}
+.mcard .mh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.mcard h3{font-family:var(--display);margin:0;font-size:18px}
+.mcard .t{color:var(--muted);font-size:13px}
+.fwd{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:8px;font-size:13.5px}
+.fwd h4{margin:0;font-family:var(--display);font-size:15px}
+.fwd textarea{font-size:13px;min-height:120px}
+.fwd .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.fwd ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+.fwd b.id{user-select:all}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@keyframes pulse{0%{r:6;opacity:.7}100%{r:22;opacity:0}}
+.pulse{animation:pulse 1.8s ease-out infinite}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ปทุมฯ น้ำท่วม-คนแน่น<small>แผนที่ 7 อำเภอ จังหวัดปทุมธานี ว่าตอนนี้ตรงไหนน้ำท่วมหนัก และตรงไหนคนเยอะ จากรายงานของคนในพื้นที่</small></h1>
+    <div class="hot">
+      <span>ปภ. สายด่วน <b>1784</b></span>
+      <span>เจ็บป่วยฉุกเฉิน <b>1669</b></span>
+      <span>เหตุด่วน <b>191</b></span>
+    </div>
+  </header>
+
+  <div id="demoBanner" class="banner" hidden>
+    ยังไม่มีใครส่งรายงานจริง จุดที่เห็นบนแผนที่ตอนนี้เป็น <b>ข้อมูลตัวอย่าง</b> เพื่อให้เห็นว่าแอปทำงานอย่างไร
+    · <button type="button" id="hideDemo">ซ่อนตัวอย่าง</button>
+  </div>
+
+  <div class="grid">
+    <div class="panel mapbox">
+      <div class="toolbar" role="group" aria-label="ชั้นข้อมูล">
+        <button class="chip" id="tFlood" aria-pressed="true">น้ำท่วม</button>
+        <button class="chip" id="tCrowd" aria-pressed="true">คนเยอะ</button>
+        <span class="sep"></span>
+        <button class="chip win" data-h="1" aria-pressed="false">1 ชม.</button>
+        <button class="chip win" data-h="3" aria-pressed="false">3 ชม.</button>
+        <button class="chip win" data-h="6" aria-pressed="false">6 ชม.</button>
+        <button class="chip win" data-h="24" aria-pressed="true">24 ชม.</button>
+        <button class="chip win" data-h="72" aria-pressed="false">3 วัน</button>
+      </div>
+      <div class="hint" id="hint">แตะบนแผนที่ตรงจุดที่เห็นน้ำท่วมหรือคนเยอะ แล้วกรอกรายงานด้านขวา (ลากเพื่อเลื่อนแผนที่)</div>
+      <svg id="map" viewBox="0 0 1000 620" role="img" aria-label="แผนที่จังหวัดปทุมธานี">
+        <g id="vp"><g id="gD"></g><g id="gL"></g><g id="gS"></g><g id="gR"></g><g id="gPick"></g></g>
+      </svg>
+      <div class="zoom"><button id="zin" aria-label="ซูมเข้า">+</button><button id="zout" aria-label="ซูมออก">−</button><button id="zre" aria-label="ดูทั้งจังหวัด" style="font-size:13px">⤢</button></div>
+      <div class="tip" id="tip"></div>
+      <div class="legend">
+        <span>สีอำเภอ = ระดับน้ำสูงสุดที่มีคนรายงาน</span>
+        <span><i class="sw" style="background:var(--w1)"></i>1 ต่ำกว่าข้อเท้า</span><span><i class="sw" style="background:var(--w2)"></i>2 ข้อเท้า-เข่า</span><span><i class="sw" style="background:var(--w3)"></i>3 เข่า-เอว</span><span><i class="sw" style="background:var(--w4)"></i>4 เอว-อก</span><span><i class="sw" style="background:var(--w5)"></i>5 อกขึ้นไป</span><span><i class="sw" style="background:var(--w6)"></i>6 มิดหัว</span>
+        <span><i class="dot" style="background:var(--crowd)"></i>จุดคนเยอะ (ใหญ่ = แน่นมาก)</span>
+        <span><i class="sw" style="background:none;border:2px solid var(--warn);transform:rotate(45deg)"></i>สถานีวัดน้ำทางการ</span>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="panel sec">
+        <div class="eyebrow">สรุปตอนนี้</div>
+        <h2>อำเภอที่ท่วมหนักสุด</h2>
+        <ol class="rank" id="rankFlood"></ol>
+        <h2 style="margin-top:6px">จุดที่คนเยอะ</h2>
+        <ol class="rank" id="rankCrowd"></ol>
+      </div>
+
+      <div class="panel sec">
+        <div class="eyebrow">ส่งรายงาน</div>
+        <h2>เห็นอะไรอยู่ตอนนี้</h2>
+        <form id="f">
+          <div class="seg">
+            <label><input type="radio" name="kind" id="kF" value="flood" checked> น้ำท่วม</label>
+            <label><input type="radio" name="kind" id="kC" value="crowd"> คนเยอะ</label>
+          </div>
+          <div class="lv" id="lvBox"></div>
+          <div id="floodExtra" class="lv">
+            <div class="sub">น้ำกำลังขึ้นหรือลง <span style="font-weight:400;color:var(--muted)">(ไม่บังคับ)</span></div>
+            <div class="opt3">
+              <label><input type="radio" name="trend" id="trUp" value="up">↑ กำลังขึ้น</label>
+              <label><input type="radio" name="trend" id="trFlat" value="flat">→ ทรงตัว</label>
+              <label><input type="radio" name="trend" id="trDown" value="down">↓ กำลังลด</label>
+            </div>
+            <div class="sub">รถผ่านได้ไหม <span style="font-weight:400;color:var(--muted)">(ไม่บังคับ)</span></div>
+            <div class="opt3">
+              <label><input type="radio" name="car" id="carAll" value="all">รถเก๋ง/กระบะผ่านได้</label>
+              <label><input type="radio" name="car" id="carHigh" value="high">เฉพาะรถสูง</label>
+              <label><input type="radio" name="car" id="carNone" value="none">รถผ่านไม่ได้ ต้องใช้เรือ</label>
+            </div>
+          </div>
+          <select id="place" hidden>
+            <option value="ศูนย์พักพิง">ศูนย์พักพิง / ที่พักชั่วคราว</option>
+            <option value="จุดแจกของ">จุดแจกอาหาร-ของ</option>
+            <option value="จุดรอรถ/อพยพ">จุดรอรถ / จุดอพยพ</option>
+            <option value="อื่นๆ">อื่นๆ</option>
+          </select>
+          <textarea id="note" maxlength="200" placeholder="รายละเอียดสั้นๆ เช่น ซอย ถนน ชื่อสถานที่ (ไม่บังคับ)"></textarea>
+          <input type="file" id="photo" accept="image/*" style="position:absolute;opacity:0;width:1px;height:1px">
+          <label class="photoBtn" for="photo" id="photoLbl">แนบรูปถ่ายจุดนี้ (ไม่บังคับ)</label>
+          <div class="prev" id="photoPrev" hidden><img id="photoImg" alt="รูปที่จะแนบ"><span id="photoInfo"></span><button type="button" id="photoRm">เอารูปออก</button></div>
+          <div class="loc" id="loc">ยังไม่ได้เลือกตำแหน่ง แตะบนแผนที่ก่อน</div>
+          <button class="primary" id="send" type="submit" disabled>ส่งรายงาน</button>
+          <div class="msg" id="msg" role="status"></div>
+        </form>
+      </div>
+
+      <div class="panel sec src">
+        <div class="eyebrow">กล้อง CCTV สด</div>
+        <h2>ดูภาพจริงจากกล้องของเทศบาลนครรังสิต</h2>
+        <div>แอปนี้แสดงภาพกล้องในหน้าตัวเองไม่ได้ กดลิงก์เพื่อเปิดดูในเว็บของเทศบาลโดยตรง</div>
+        <div><a href="https://cdp.rangsitcity.go.th/" target="_blank" rel="noopener">cdp.rangsitcity.go.th</a> กล้องเขื่อนสะพานแดง คลองรังสิตฯ และจุดวัดระดับน้ำ ภาพอัปเดตทุกไม่กี่วินาที</div>
+        <div><a href="https://rangsitcity.go.th/cctvrangsitcity/" target="_blank" rel="noopener">rangsitcity.go.th/cctvrangsitcity</a> กล้องจราจร หน้าหมู่บ้านรัตนโกสินทร์ 200, โค้งฟิวเจอร์-เปาโล (คลอง 1), สะพานฟ้า</div>
+      </div>
+
+      <div class="panel sec">
+        <div class="eyebrow">รายงานล่าสุด</div>
+        <ul class="feed" id="feed"></ul>
+      </div>
+
+      <div class="panel sec src">
+        <div class="eyebrow">ที่มาข้อมูล</div>
+        <div>จุดน้ำท่วมและจุดคนเยอะมาจากคนที่ส่งรายงานในหน้านี้ ข้อมูลยังไม่ได้ตรวจสอบโดยหน่วยงาน กดยืนยันได้ถ้าเห็นว่ายังเป็นอยู่</div>
+        <div id="stInfo"></div>
+        <div>ดูระดับน้ำทางการแบบสดได้ที่ <a href="https://www.thaiwater.net" target="_blank" rel="noopener">thaiwater.net</a> (สสน.) และภาพน้ำท่วมจากดาวเทียมที่ <a href="https://flood.gistda.or.th" target="_blank" rel="noopener">flood.gistda.or.th</a> (GISTDA)</div>
+        <div>ขอบเขตอำเภอ: OpenGISData-Thailand</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal" hidden><div class="mcard" role="dialog" aria-modal="true" aria-labelledby="mTitle"><div class="mh"><div><h3 id="mTitle"></h3><div class="t" id="mMeta"></div></div><button class="chip" id="mClose" type="button">ปิด</button></div><div id="mBody"></div></div></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+// วาง firebaseConfig จาก Firebase console (Project settings > Your apps) ตรงนี้
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBW-QBnC5uYRKbKiVQuLV4terC_GfoSaCk",
+  authDomain: "report-f143a.firebaseapp.com",
+  projectId: "report-f143a",
+  storageBucket: "report-f143a.firebasestorage.app",
+  messagingSenderId: "96932586446",
+  appId: "1:96932586446:web:d0e18fec7d4bf12bd9c19f"
+};
+const DISTRICTS = [{"code":"1303","th":"ธัญบุรี","en":"Thanyaburi","km2":112.2,"rings":[[[100.6057,13.9647],[100.6036,13.9807],[100.6016,13.9959],[100.6324,14.0025],[100.6532,14.0064],[100.6634,14.0071],[100.6758,14.0089],[100.6984,14.0182],[100.7098,14.0233],[100.7209,14.0284],[100.7442,14.0387],[100.7559,14.0434],[100.8012,14.0595],[100.8468,14.0757],[100.9143,14.0993],[100.9143,14.0838],[100.9142,14.0674],[100.8462,14.0437],[100.8001,14.0274],[100.8002,14.0296],[100.7557,14.0127],[100.7065,13.9942],[100.6961,13.9866],[100.6634,13.9809],[100.6057,13.9647]]]},{"code":"1304","th":"หนองเสือ","en":"Nong Suea","km2":341.5,"rings":[[[100.8012,14.0595],[100.7559,14.0434],[100.7553,14.1125],[100.755,14.211],[100.7767,14.2216],[100.8005,14.233],[100.8231,14.2439],[100.846,14.2537],[100.8917,14.2755],[100.8923,14.2437],[100.9517,14.2721],[100.9455,14.2489],[100.9467,14.2366],[100.9143,14.2212],[100.9143,14.2092],[100.9139,14.1801],[100.9142,14.1359],[100.9143,14.0993],[100.8468,14.0757],[100.8012,14.0595]]]},{"code":"1301","th":"เมืองปทุมธานี","en":"Mueang Pathum Thani","km2":144.9,"rings":[[[100.6036,13.9807],[100.6057,13.9647],[100.6069,13.954],[100.6082,13.9425],[100.5766,13.9546],[100.5678,13.9513],[100.5678,13.9512],[100.557,13.95],[100.5401,13.9558],[100.5346,13.947],[100.5241,13.9435],[100.5098,13.944],[100.5013,13.9369],[100.489,13.9452],[100.4648,13.9713],[100.4591,13.9715],[100.4665,13.9768],[100.4678,13.9843],[100.4686,13.9975],[100.4467,14.0101],[100.4485,14.0129],[100.45,14.0153],[100.458,14.028],[100.4788,14.0187],[100.4867,14.0188],[100.4902,14.0264],[100.4958,14.0389],[100.4947,14.048],[100.5233,14.0317],[100.5435,14.0299],[100.5455,14.0328],[100.5561,14.041],[100.5643,14.0375],[100.5796,14.0403],[100.5865,14.046],[100.5853,14.0745],[100.59,14.0742],[100.5967,14.0328],[100.601,14.0009],[100.6016,13.9959],[100.6036,13.9807]]]},{"code":"1302","th":"คลองหลวง","en":"Khlong Luang","km2":305.1,"rings":[[[100.6324,14.0025],[100.6016,13.9959],[100.601,14.0009],[100.5967,14.0328],[100.59,14.0742],[100.5864,14.0964],[100.5809,14.1274],[100.6071,14.1356],[100.6199,14.1293],[100.62,14.1426],[100.6311,14.1487],[100.6527,14.1601],[100.6692,14.1687],[100.6745,14.1714],[100.6989,14.1838],[100.721,14.1943],[100.7317,14.1993],[100.7436,14.2051],[100.755,14.211],[100.7553,14.1125],[100.7559,14.0434],[100.7442,14.0387],[100.7209,14.0284],[100.7098,14.0233],[100.6984,14.0182],[100.6758,14.0089],[100.6634,14.0071],[100.6532,14.0064],[100.6324,14.0025]]]},{"code":"1307","th":"สามโคก","en":"Sam Khok","km2":120.4,"rings":[[[100.5561,14.041],[100.5455,14.0328],[100.5435,14.0299],[100.5233,14.0317],[100.4947,14.048],[100.481,14.06],[100.4802,14.0707],[100.452,14.0878],[100.4236,14.1],[100.4219,14.1142],[100.4301,14.1143],[100.4562,14.1169],[100.4662,14.112],[100.4815,14.1121],[100.495,14.1153],[100.5172,14.1294],[100.5281,14.1208],[100.5411,14.1169],[100.55,14.1107],[100.5539,14.1112],[100.5524,14.1179],[100.5809,14.1274],[100.5864,14.0964],[100.59,14.0742],[100.5853,14.0745],[100.5865,14.046],[100.5796,14.0403],[100.5643,14.0375],[100.5561,14.041]]]},{"code":"1305","th":"ลาดหลุมแก้ว","en":"Lat Lum Kaeo","km2":193.3,"rings":[[[100.4537,13.9668],[100.4348,13.9807],[100.4236,13.9833],[100.4113,13.9866],[100.3809,13.9945],[100.3855,13.9876],[100.3648,13.9909],[100.3566,13.9997],[100.3319,14.0565],[100.3416,14.1027],[100.3442,14.1156],[100.3828,14.1151],[100.3831,14.133],[100.3941,14.1318],[100.3934,14.1214],[100.3983,14.115],[100.4219,14.1142],[100.4236,14.1],[100.452,14.0878],[100.4802,14.0707],[100.481,14.06],[100.4947,14.048],[100.4958,14.0389],[100.4902,14.0264],[100.4867,14.0188],[100.4788,14.0187],[100.458,14.028],[100.45,14.0153],[100.4485,14.0129],[100.4467,14.0101],[100.4686,13.9975],[100.4678,13.9843],[100.4665,13.9768],[100.4591,13.9715],[100.4537,13.9668]]]},{"code":"1306","th":"ลำลูกกา","en":"Lam Luk Ka","km2":304.1,"rings":[[[100.7073,13.9174],[100.6876,13.9176],[100.6877,13.9215],[100.6879,13.923],[100.6902,13.9286],[100.6902,13.9304],[100.663,13.9309],[100.6399,13.932],[100.6397,13.9328],[100.6399,13.9336],[100.64,13.9342],[100.6253,13.9366],[100.6249,13.9386],[100.6243,13.9419],[100.6238,13.9447],[100.6235,13.9473],[100.6229,13.948],[100.6228,13.9481],[100.6223,13.9483],[100.6069,13.954],[100.6057,13.9647],[100.6634,13.9809],[100.6961,13.9866],[100.7065,13.9942],[100.7557,14.0127],[100.8002,14.0296],[100.8001,14.0274],[100.8462,14.0437],[100.9142,14.0674],[100.9138,14.0083],[100.9138,14.0064],[100.9135,13.961],[100.9124,13.9454],[100.8789,13.9412],[100.8472,13.9371],[100.8395,13.9361],[100.793,13.9289],[100.7925,13.9288],[100.7806,13.9258],[100.7757,13.9246],[100.747,13.9173],[100.7298,13.9178],[100.7287,13.9178],[100.7242,13.9177],[100.7073,13.9174]]]}];
+// Official station snapshot pulled by Claude from ThaiWater (HII). Not live.
+const STATIONS = [
+  {name:"คลองเปรมประชากร หลักหก", amp:"เมืองปทุมธานี", lat:13.96562, lng:100.60262, status:"น้ำล้นตลิ่ง (วิกฤต ระดับ 5 จาก 5)", at:"1 ต.ค. 2569 เวลา 02:20 น."}
+];
+const LANDMARKS = [
+  {n:"ศาลากลางจังหวัด", lat:14.0205, lng:100.5250},
+  {n:"ม.ธรรมศาสตร์ รังสิต", lat:14.0705, lng:100.6050},
+  {n:"ฟิวเจอร์พาร์ค รังสิต", lat:13.9890, lng:100.6170}
+];
+const FLOOD_LV = [null,
+  {t:"แห้ง / ต่ำกว่าข้อเท้า", s:"< 10 ซม.", cm:5},
+  {t:"ข้อเท้า-เข่า", s:"10-50 ซม.", cm:30},
+  {t:"เข่า-เอว", s:"50-100 ซม.", cm:75},
+  {t:"เอว-อก", s:"100-130 ซม.", cm:115},
+  {t:"อกขึ้นไป", s:"130-180 ซม.", cm:155},
+  {t:"มิดหัว / ท่วมหลังคา", s:"> 180 ซม.", cm:200}];
+const TREND = {up:"↑ น้ำกำลังขึ้น", flat:"→ ทรงตัว", down:"↓ กำลังลด"};
+const CAR = {all:"รถเก๋ง/กระบะผ่านได้", high:"เฉพาะรถสูง", none:"รถผ่านไม่ได้ ต้องใช้เรือ"};
+const MAXLV = {flood:6, crowd:3};
+const extra = r=>r.kind!=="flood"?"":[TREND[r.trend],CAR[r.car]].filter(Boolean).map(esc).join(" · ");
+function personIcon(cm){const top=4,fig=40,wh=Math.min(44,(cm/170)*fig);return `<svg viewBox="0 0 44 48" aria-hidden="true"><circle cx="22" cy="${top+4}" r="4" fill="var(--ink)"/><rect x="17" y="${top+9}" width="10" height="16" rx="2" fill="var(--ink)"/><rect x="17.5" y="${top+24}" width="4" height="16" fill="var(--ink)"/><rect x="22.5" y="${top+24}" width="4" height="16" fill="var(--ink)"/><rect x="2" y="${top+fig-wh}" width="40" height="${wh+4}" fill="var(--w4)" fill-opacity=".72"/><line x1="2" x2="42" y1="${top+fig-wh}" y2="${top+fig-wh}" stroke="var(--w5)" stroke-width="1.5"/></svg>`}
+const CROWD_LV = [null,
+  {t:"เริ่มมีคนมาก", s:"ยังมีที่ว่าง"},
+  {t:"แน่น", s:"ต่อคิวยาว ที่เริ่มไม่พอ"},
+  {t:"แออัดมาก / ล้น", s:"ต้องการที่พักหรือของเพิ่มด่วน"}];
+
+const H = 3600e3, now0 = Date.now();
+const DEMO = [
+  ["flood",5,100.705,14.006,"ลำลูกกา","ซอยลำลูกกา คลอง 7 ใช้เรือเข้าออก",2,"","up","none"],
+  ["flood",4,100.672,13.958,"ลำลูกกา","ถนนลำลูกกา คลอง 4",3,"","flat","high"],
+  ["flood",4,100.585,13.968,"เมืองปทุมธานี","หลักหก หลังคลองเปรมฯ",1,"","up","high"],
+  ["flood",2,100.652,14.040,"ธัญบุรี","รังสิต-นครนายก คลอง 3",5,"","down","all"],
+  ["flood",3,100.540,14.090,"สามโคก","ริมเจ้าพระยา ท่าน้ำ",7,"","up","high"],
+  ["flood",1,100.630,14.130,"คลองหลวง","คลองหลวง คลอง 5 น้ำเริ่มลด",10,"","down","all"],
+  ["flood",4,100.420,14.075,"ลาดหลุมแก้ว","หมู่บ้านริมคลองพระอุดม",4,"","flat","none"],
+  ["flood",2,100.800,14.210,"หนองเสือ","น้ำขังข้างทาง",14,"","flat","all"],
+  ["crowd",3,100.606,14.068,"คลองหลวง","ศูนย์พักพิง ยิมเนเซียม",1,"ศูนย์พักพิง"],
+  ["crowd",2,100.525,14.019,"เมืองปทุมธานี","แจกข้าวกล่องหน้าศาลากลาง",2,"จุดแจกของ"],
+  ["crowd",3,100.690,13.985,"ลำลูกกา","จุดรอรถทหาร ปากซอย",1,"จุดรอรถ/อพยพ"],
+  ["crowd",1,100.645,14.025,"ธัญบุรี","วัดใช้เป็นที่พัก",6,"ศูนย์พักพิง"]
+].map((r,i)=>({id:"demo"+i,demo:true,kind:r[0],level:r[1],lng:r[2],lat:r[3],amp:r[4],note:r[5],at:now0-r[6]*H,confirms:Math.max(0,4-r[6]%5),place:r[7]||"",trend:r[8]||"",car:r[9]||""}));
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const NS = "http://www.w3.org/2000/svg";
+const el = (n,a={})=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e};
+
+// ---- projection
+let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+DISTRICTS.forEach(d=>d.rings.forEach(r=>r.forEach(([x,y])=>{minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)})));
+const KX = Math.cos((minY+maxY)/2*Math.PI/180), PAD=24, W=1000, HH=620;
+const scale = Math.min((W-2*PAD)/((maxX-minX)*KX),(HH-2*PAD)/(maxY-minY));
+const ox = (W-(maxX-minX)*KX*scale)/2, oy=(HH-(maxY-minY)*scale)/2;
+const proj = (lng,lat)=>[ox+(lng-minX)*KX*scale, oy+(maxY-lat)*scale];
+const unproj = (x,y)=>[minX+(x-ox)/(KX*scale), maxY-(y-oy)/scale];
+
+function inRing(pt,r){let c=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const[xi,yi]=r[i],[xj,yj]=r[j];if((yi>pt[1])!==(yj>pt[1])&&pt[0]<(xj-xi)*(pt[1]-yi)/(yj-yi)+xi)c=!c}return c}
+const districtAt = (lng,lat)=>DISTRICTS.find(d=>d.rings.some(r=>inRing([lng,lat],r)));
+
+// ---- draw base
+const gD=$("#gD"), gL=$("#gL"), gS=$("#gS"), gR=$("#gR"), gPick=$("#gPick");
+const dPaths={};
+DISTRICTS.forEach(d=>{
+  const p=el("path",{class:"dist",d:d.rings.map(r=>"M"+r.map(([x,y])=>proj(x,y).map(v=>v.toFixed(1)).join(",")).join("L")+"Z").join("")});
+  p.dataset.amp=d.th; gD.appendChild(p); dPaths[d.th]=p;
+  // label at area-weighted centroid of largest ring
+  const r=d.rings.reduce((a,b)=>b.length>a.length?b:a);
+  let A=0,cx=0,cy=0;for(let i=0,j=r.length-1;i<r.length;j=i++){const[x0,y0]=proj(...r[j]),[x1,y1]=proj(...r[i]);const f=x0*y1-x1*y0;A+=f;cx+=(x0+x1)*f;cy+=(y0+y1)*f}
+  const t=el("text",{class:"dlabel",x:cx/(3*A),y:cy/(3*A),"text-anchor":"middle","font-size":17});t.textContent=d.th;gL.appendChild(t);
+});
+LANDMARKS.forEach(l=>{const[x,y]=proj(l.lng,l.lat);gL.appendChild(el("circle",{cx:x,cy:y,r:2.5,fill:"var(--muted)"}));const t=el("text",{class:"lm",x:x+5,y:y+3.5});t.textContent=l.n;gL.appendChild(t)});
+STATIONS.forEach(s=>{const[x,y]=proj(s.lng,s.lat);const g=el("g",{transform:`translate(${x},${y})`});g.appendChild(el("rect",{x:-6,y:-6,width:12,height:12,transform:"rotate(45)",fill:"var(--panel)",stroke:"var(--warn)","stroke-width":2.5}));g.dataset.tip=`<b>สถานีวัดน้ำ ${esc(s.name)}</b><br>${esc(s.status)}<br>ข้อมูล ThaiWater ${esc(s.at)}`;gS.appendChild(g)});
+$("#stInfo").innerHTML = "สถานีวัดน้ำทางการบนแผนที่: " + STATIONS.map(s=>`${esc(s.name)} อ.${esc(s.amp)} ${esc(s.status)} ณ ${esc(s.at)}`).join("; ") + " (ค่าจาก ThaiWater ณ เวลาที่ระบุ ไม่อัปเดตเอง)";
+
+// ---- state
+let real=[], showDemo=true, layers={flood:true,crowd:true}, winH=24, pick=null;
+const active = ()=>{const list = real.length? real : (showDemo? DEMO: []);const cut=Date.now()-winH*H;return list.filter(r=>(r.lastAt||r.at)>=cut)};
+const ago = t=>{const m=Math.round((Date.now()-t)/6e4);if(m<1)return"เมื่อสักครู่";if(m<60)return m+" นาทีที่แล้ว";const h=Math.round(m/60);return h<24? h+" ชม.ที่แล้ว": Math.round(h/24)+" วันที่แล้ว"};
+const wcol = l=>l?`var(--w${l})`:"var(--land)";
+
+function render(){
+  const rs=active();
+  $("#demoBanner").hidden = !( !real.length && showDemo );
+  // districts
+  const by={};DISTRICTS.forEach(d=>by[d.th]={max:0,n:0,crowd:0,cmax:0});
+  rs.forEach(r=>{const b=by[r.amp];if(!b)return;if(r.kind==="flood"){b.max=Math.max(b.max,r.level);b.n++;if(r.trend==="up")b.up=(b.up||0)+1}else{b.crowd++;b.cmax=Math.max(b.cmax,r.level)}});
+  for(const k in dPaths){const b=by[k];dPaths[k].setAttribute("fill",layers.flood?wcol(b.max):"var(--land)");dPaths[k].dataset.tip=`<b>อ.${esc(k)}</b><br>`+(b.n?`น้ำท่วม ${b.n} จุด สูงสุด: ${esc(FLOOD_LV[b.max].t)}`:"ยังไม่มีรายงานน้ำท่วม")+(b.crowd?`<br>จุดคนเยอะ ${b.crowd} จุด`:"")}
+  // points
+  gR.textContent="";
+  rs.filter(r=>layers[r.kind]).sort((a,b)=>a.kind===b.kind?a.level-b.level:a.kind==="flood"?-1:1).forEach(r=>{
+    const[x,y]=proj(r.lng,r.lat);const g=el("g",{transform:`translate(${x},${y})`});
+    if(r.kind==="flood"){g.appendChild(el("circle",{r:4+r.level*1.3,fill:wcol(r.level),stroke:"var(--ink)","stroke-width":1.2,"vector-effect":"non-scaling-stroke"}))}
+    else{const rad=5+r.level*3.5;if(r.level>=3)g.appendChild(el("circle",{class:"pulse",r:6,fill:"var(--crowd)"}));g.appendChild(el("circle",{r:rad,fill:"var(--crowd)","fill-opacity":.35,stroke:"var(--crowd)","stroke-width":1.5}));g.appendChild(el("circle",{r:3,fill:"var(--crowd)"}))}
+    g.dataset.id=r.id;g.style.cursor="pointer";
+    const L=r.kind==="flood"?FLOOD_LV[r.level]:CROWD_LV[r.level];
+    g.dataset.tip=`<b>${r.kind==="flood"?"น้ำท่วม":"คนเยอะ"}: ${esc(L.t)}</b>${r.demo?' <span class="tag">ตัวอย่าง</span>':''}<br>${extra(r)?extra(r)+"<br>":""}${r.place?esc(r.place)+" · ":""}${esc(r.note||"")}<br>อ.${esc(r.amp)} · ${ago(r.lastAt||r.at)}${r.confirms?` · ยืนยัน ${r.confirms}`:""}<br><i>${r.hasPhoto?"มีรูป · ":""}แตะเพื่อดูรายละเอียด</i>`;
+    gR.appendChild(g)});
+  // rankings
+  const fr=Object.entries(by).filter(([,b])=>b.n).sort((a,b)=>b[1].max-a[1].max||b[1].n-a[1].n);
+  $("#rankFlood").innerHTML = fr.length? fr.slice(0,5).map(([k,b])=>`<li data-amp="${esc(k)}"><span class="nm">อ.${esc(k)}</span><span class="pill" style="background:${wcol(b.max)};color:${b.max>=4?"var(--panel)":"var(--ink)"}">ระดับ ${b.max}</span><span class="meta">${esc(FLOOD_LV[b.max].t)} · ${b.n} จุดรายงาน${b.up?` · <b style="color:var(--warn)">น้ำกำลังขึ้น ${b.up} จุด</b>`:""}</span></li>`).join("") : `<li style="cursor:default"><span class="meta">ยังไม่มีรายงานน้ำท่วมในช่วงเวลานี้</span></li>`;
+  const cr=rs.filter(r=>r.kind==="crowd").sort((a,b)=>b.level-a.level||(b.lastAt||b.at)-(a.lastAt||a.at));
+  $("#rankCrowd").innerHTML = cr.length? cr.slice(0,5).map(r=>`<li data-id="${esc(r.id)}"><span class="nm">${esc(r.place||"จุดคนเยอะ")}${r.demo?'<span class="tag">ตัวอย่าง</span>':''}</span><span class="pill" style="background:var(--crowd-soft);color:var(--crowd)">${esc(CROWD_LV[r.level].t)}</span><span class="meta">อ.${esc(r.amp)} · ${esc(r.note||"")} · ${ago(r.lastAt||r.at)}</span></li>`).join("") : `<li style="cursor:default"><span class="meta">ยังไม่มีรายงานจุดคนเยอะในช่วงเวลานี้</span></li>`;
+  // feed
+  const fd=[...rs].sort((a,b)=>(b.lastAt||b.at)-(a.lastAt||a.at)).slice(0,40);
+  $("#feed").innerHTML = fd.length? fd.map(r=>{const L=r.kind==="flood"?FLOOD_LV[r.level]:CROWD_LV[r.level];return `<li><i class="dot" style="background:${r.kind==="flood"?wcol(r.level):"var(--crowd)"}"></i><div><b>${r.kind==="flood"?"น้ำท่วม":"คนเยอะ"}: ${esc(L.t)}</b>${r.demo?'<span class="tag">ตัวอย่าง</span>':''}${extra(r)?`<div>${extra(r)}</div>`:""}<div>${r.place?esc(r.place)+" · ":""}${esc(r.note||"")}</div><div class="t">อ.${esc(r.amp)} · ${ago(r.lastAt||r.at)}${r.confirms?` · มีคนยืนยัน ${r.confirms}`:""}</div></div>${r.hasPhoto?`<img class="thumb" data-photo="${esc(r.id)}" alt="รูปจากผู้รายงาน">`:""}${r.demo?"":`<div class="acts"><button data-confirm="${esc(r.id)}">ยังเป็นอยู่</button>${myId&&r.by===myId?`<button data-del="${esc(r.id)}">ลบของฉัน</button>`:""}</div>`}</li>`}).join("") : `<li><span class="t" style="grid-column:1/-1">ยังไม่มีรายงานในช่วงเวลานี้ แตะบนแผนที่เพื่อส่งรายงานแรก</span></li>`;
+  fillThumbs();
+}
+
+// ---- tooltip
+const tip=$("#tip"), box=$(".mapbox");
+$("#map").addEventListener("pointermove",e=>{const t=e.target.closest("[data-tip]");if(!t||drag){tip.style.opacity=0;return}const b=box.getBoundingClientRect();tip.innerHTML=t.dataset.tip;tip.style.left=(e.clientX-b.left)+"px";tip.style.top=(e.clientY-b.top)+"px";tip.style.opacity=1});
+$("#map").addEventListener("pointerleave",()=>tip.style.opacity=0);
+
+// ---- pan / zoom / pick
+const svg=$("#map"), vp=$("#vp");
+let T={k:1,x:0,y:0}, drag=null;
+const apply=()=>{vp.setAttribute("transform",`translate(${T.x},${T.y}) scale(${T.k})`);gL.querySelectorAll(".dlabel").forEach(t=>t.setAttribute("font-size",17/Math.sqrt(T.k)))};
+const svgPt=e=>{const b=svg.getBoundingClientRect();return[(e.clientX-b.left)*W/b.width,(e.clientY-b.top)*HH/b.height]};
+function zoomAt(f,px=W/2,py=HH/2){const k=Math.max(1,Math.min(8,T.k*f));T.x=px-(px-T.x)*k/T.k;T.y=py-(py-T.y)*k/T.k;T.k=k;if(k===1){T.x=0;T.y=0}apply()}
+svg.addEventListener("wheel",e=>{e.preventDefault();const[x,y]=svgPt(e);zoomAt(e.deltaY<0?1.25:0.8,x,y)},{passive:false});
+$("#zin").onclick=()=>zoomAt(1.5);$("#zout").onclick=()=>zoomAt(1/1.5);$("#zre").onclick=()=>{T={k:1,x:0,y:0};apply()};
+svg.addEventListener("pointerdown",e=>{const[x,y]=svgPt(e);drag={sx:x,sy:y,tx:T.x,ty:T.y,moved:false};svg.setPointerCapture(e.pointerId)});
+svg.addEventListener("pointermove",e=>{if(!drag)return;const[x,y]=svgPt(e);if(Math.hypot(x-drag.sx,y-drag.sy)>6)drag.moved=true;if(drag.moved&&T.k>1){T.x=drag.tx+x-drag.sx;T.y=drag.ty+y-drag.sy;apply()}});
+svg.addEventListener("pointerup",e=>{if(!drag)return;const d=drag;drag=null;if(d.moved)return;const under=document.elementFromPoint(e.clientX,e.clientY);const hit=under&&under.closest&&under.closest("#gR [data-id]");if(hit){showDetail(hit.dataset.id);return}const[x,y]=svgPt(e);const[lng,lat]=unproj((x-T.x)/T.k,(y-T.y)/T.k);const dd=districtAt(lng,lat);if(!dd){setMsg("จุดนี้อยู่นอกจังหวัดปทุมธานี แตะในเขตอำเภอบนแผนที่",true);return}pick={lng:+lng.toFixed(5),lat:+lat.toFixed(5),amp:dd.th};drawPick();updateForm()});
+function drawPick(){gPick.textContent="";if(!pick)return;const[x,y]=proj(pick.lng,pick.lat);const g=el("g",{transform:`translate(${x},${y})`});g.appendChild(el("path",{d:"M0,0 l-7,-16 a8,8 0 1,1 14,0 z",fill:"var(--ink)"}));g.appendChild(el("circle",{cy:-18,r:3,fill:"var(--panel)"}));gPick.appendChild(g)}
+
+// ---- form
+function lvOptions(){const kind=$("#f").kind.value;
+  if(kind==="flood"){$("#lvBox").className="lvgrid";$("#lvBox").innerHTML=FLOOD_LV.slice(1).map((o,i)=>`<label><input type="radio" name="level" id="lvflood${i+1}" value="${i+1}" ${i===1?"checked":""}>${personIcon(o.cm)}<b>${o.t}</b><small style="color:var(--muted)">${o.s}</small></label>`).join("")}
+  else{$("#lvBox").className="lv";$("#lvBox").innerHTML=CROWD_LV.slice(1).map((o,i)=>`<label><input type="radio" name="level" id="lvcrowd${i+1}" value="${i+1}" ${i===1?"checked":""}><span>${i+1}. ${o.t}<small>${o.s}</small></span></label>`).join("")}
+  $("#place").hidden=kind!=="crowd";$("#floodExtra").hidden=kind!=="flood"}
+$("#f").addEventListener("change",e=>{if(e.target.name==="kind")lvOptions()});
+lvOptions();
+function updateForm(){$("#loc").innerHTML=pick?`ตำแหน่ง: <b>อ.${esc(pick.amp)}</b> (${pick.lat}, ${pick.lng})`:"ยังไม่ได้เลือกตำแหน่ง แตะบนแผนที่ก่อน";$("#send").disabled=!pick||!db||readOnly}
+const setMsg=(t,bad)=>{$("#msg").textContent=t;$("#msg").style.color=bad?"var(--warn)":"var(--accent)"};
+
+// ---- toolbar
+$("#tFlood").onclick=e=>{layers.flood=!layers.flood;e.target.setAttribute("aria-pressed",layers.flood);render()};
+$("#tCrowd").onclick=e=>{layers.crowd=!layers.crowd;e.target.setAttribute("aria-pressed",layers.crowd);render()};
+document.querySelectorAll(".win").forEach(b=>b.onclick=()=>{winH=+b.dataset.h;document.querySelectorAll(".win").forEach(x=>x.setAttribute("aria-pressed",x===b));render()});
+$("#hideDemo").onclick=()=>{showDemo=false;render()};
+$("#rankFlood").addEventListener("click",e=>{const li=e.target.closest("li[data-amp]");if(!li)return;const p=dPaths[li.dataset.amp];const b=p.getBBox();const k=Math.min(6,Math.min(W/b.width,HH/b.height)*0.8);T={k,x:W/2-(b.x+b.width/2)*k,y:HH/2-(b.y+b.height/2)*k};apply()});
+$("#rankCrowd").addEventListener("click",e=>{const li=e.target.closest("li[data-id]");if(!li)return;const r=[...real,...DEMO].find(r=>r.id===li.dataset.id);if(!r)return;const[x,y]=proj(r.lng,r.lat);const k=4;T={k,x:W/2-x*k,y:HH/2-y*k};apply()});
+
+// ---- photos (stored compressed in db collection "photos", one doc per report)
+let photoData=null;
+const photoCache=new Map();
+function getPhoto(id){if(!db)return Promise.resolve(null);if(!photoCache.has(id))photoCache.set(id,db.collection("photos").doc(id).get().then(s=>s.exists?(s.data().img||null):null).catch(()=>{photoCache.delete(id);return null}));return photoCache.get(id)}
+function fillThumbs(){document.querySelectorAll("img[data-photo]:not([src])").forEach(async im=>{const src=await getPhoto(im.dataset.photo);if(src&&/^data:image\/(jpeg|png|webp);base64,/.test(src))im.src=src;else im.remove()})}
+async function compress(file){
+  const url=URL.createObjectURL(file);
+  try{const img=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=url});
+    for(const [max,q] of [[960,.7],[800,.6],[640,.55],[480,.5]]){const k=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));const c=document.createElement("canvas");c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);c.getContext("2d").drawImage(img,0,0,c.width,c.height);const d=c.toDataURL("image/jpeg",q);if(d.length<180000)return d}
+    return null}finally{URL.revokeObjectURL(url)}}
+$("#photo").addEventListener("change",async e=>{const file=e.target.files[0];e.target.value="";if(!file)return;
+  if(!file.type.startsWith("image/")){setMsg("ไฟล์นี้ไม่ใช่รูปภาพ",true);return}
+  setMsg("กำลังย่อรูป…");try{photoData=await compress(file)}catch{photoData=null}
+  if(!photoData){setMsg("ใช้รูปนี้ไม่ได้ ลองรูปอื่น",true);return}
+  setMsg("");$("#photoImg").src=photoData;$("#photoInfo").textContent=`ย่อแล้ว ${Math.round(photoData.length*0.75/1024)} KB`;$("#photoPrev").hidden=false;$("#photoLbl").textContent="เปลี่ยนรูป"});
+function clearPhoto(){photoData=null;$("#photoPrev").hidden=true;$("#photoImg").removeAttribute("src");$("#photoLbl").textContent="แนบรูปถ่ายจุดนี้ (ไม่บังคับ)"}
+$("#photoRm").onclick=clearPhoto;
+
+// ---- illustrated scene drawn from the report itself (used when there is no photo, and alongside one)
+function sceneSVG(r){
+  const W2=520,H2=230,G=200,px=56;           // ground y, pixels per... see cmPx
+  const cmPx=0.75;                           // 1 cm = 0.75 px, person 170 cm ~ 128 px
+  let body="";
+  const sky=`<rect width="${W2}" height="${H2}" fill="var(--bg)"/>`;
+  const ground=`<rect x="0" y="${G}" width="${W2}" height="${H2-G}" fill="var(--land-stroke)" opacity=".5"/>`;
+  const person=(x,h=170,c="var(--ink)")=>{const s=h*cmPx,top=G-s;return `<g fill="${c}"><circle cx="${x}" cy="${top+s*.07}" r="${s*.07}"/><rect x="${x-s*.09}" y="${top+s*.15}" width="${s*.18}" height="${s*.38}" rx="3"/><rect x="${x-s*.085}" y="${top+s*.52}" width="${s*.075}" height="${s*.48}"/><rect x="${x+s*.01}" y="${top+s*.52}" width="${s*.075}" height="${s*.48}"/><rect x="${x-s*.16}" y="${top+s*.17}" width="${s*.06}" height="${s*.3}" rx="2"/><rect x="${x+s*.1}" y="${top+s*.17}" width="${s*.06}" height="${s*.3}" rx="2"/></g>`};
+  if(r.kind==="flood"){
+    const L=FLOOD_LV[r.level], wl=Math.min(G-8,L.cm*cmPx), wy=G-wl;
+    // sedan ~145 cm tall, pickup/high truck ~200 cm
+    const car=(x,w,h,c)=>{const y=G-h*cmPx;return `<g><rect x="${x}" y="${y+h*cmPx*.35}" width="${w}" height="${h*cmPx*.5}" rx="6" fill="${c}"/><rect x="${x+w*.2}" y="${y}" width="${w*.55}" height="${h*cmPx*.45}" rx="8" fill="${c}"/><rect x="${x+w*.27}" y="${y+5}" width="${w*.18}" height="${h*cmPx*.28}" rx="3" fill="var(--panel)" opacity=".7"/><rect x="${x+w*.5}" y="${y+5}" width="${w*.18}" height="${h*cmPx*.28}" rx="3" fill="var(--panel)" opacity=".7"/><circle cx="${x+w*.22}" cy="${G-h*cmPx*.12}" r="${h*cmPx*.15}" fill="var(--ink)"/><circle cx="${x+w*.78}" cy="${G-h*cmPx*.12}" r="${h*cmPx*.15}" fill="var(--ink)"/></g>`};
+    body+=person(70)+`<text x="70" y="${G-170*cmPx-8}" text-anchor="middle" font-size="11" fill="var(--muted)">คน 170 ซม.</text>`;
+    body+=car(130,150,145,"var(--muted)")+`<text x="205" y="${G-145*cmPx-8}" text-anchor="middle" font-size="11" fill="var(--muted)">รถเก๋ง</text>`;
+    body+=car(310,170,200,"var(--land-stroke)")+`<text x="395" y="${G-200*cmPx-8}" text-anchor="middle" font-size="11" fill="var(--muted)">รถกระบะยกสูง</text>`;
+    body+=`<rect x="0" y="${wy}" width="${W2}" height="${H2-wy}" fill="${wcol(r.level)}" fill-opacity=".78"/><path d="M0 ${wy} q 20 -5 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0 t 40 0" fill="none" stroke="var(--w6)" stroke-width="1.5" opacity=".6"/>`;
+    body+=`<line x1="${W2-22}" x2="${W2-22}" y1="${G}" y2="${wy}" stroke="var(--ink)" stroke-width="1.5"/><text x="${W2-28}" y="${Math.max(14,wy-6)}" text-anchor="end" font-size="13" font-weight="600" fill="var(--ink)">${esc(L.s)}</text>`;
+    if(r.trend){const up=r.trend==="up",dn=r.trend==="down";body+=`<g transform="translate(${W2-22},${Math.max(30,wy-34)})" fill="${up?"var(--warn)":"var(--accent)"}">${up?'<path d="M0 -12 l9 12 h-6 v10 h-6 v-10 h-6z"/>':dn?'<path d="M0 12 l9 -12 h-6 v-10 h-6 v10 h-6z"/>':'<path d="M12 0 l-12 9 v-6 h-10 v-6 h10 v-6z"/>'}</g>`}
+  }else{
+    const n=[0,4,9,16][r.level], cols=16;
+    for(let i=0;i<n;i++){const row=Math.floor(i/cols),x=24+(i%cols)*31+(row%2)*14,h=150+((i*37)%30);body+=`<g opacity="${1-row*.25}" transform="translate(0,${-row*16})">${person(x,h,"var(--crowd)")}</g>`}
+    body+=`<text x="${W2/2}" y="24" text-anchor="middle" font-size="14" font-weight="600" fill="var(--ink)">${esc(r.place||"จุดคนเยอะ")}: ${esc(CROWD_LV[r.level].t)}</text>`;
+  }
+  return `<svg viewBox="0 0 ${W2} ${H2}" role="img" aria-label="ภาพจำลองจากข้อมูลที่รายงาน" style="width:100%;height:auto;border-radius:8px;border:1px solid var(--line)">${sky}${ground}${body}</svg><div class="t">ภาพจำลองจากข้อมูลที่รายงาน ไม่ใช่ภาพถ่ายจริง${r.kind==="flood"&&r.car?` · ผู้รายงานบอกว่า: ${esc(CAR[r.car])}`:""}</div>`;
+}
+
+// ---- forward to agencies: the viewer copies a ready-made message and sends it themselves
+function fwdText(r){
+  const L=r.kind==="flood"?FLOOD_LV[r.level]:CROWD_LV[r.level];
+  const d=new Date(r.lastAt||r.at);const when=d.toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"});
+  return [r.kind==="flood"?`แจ้งน้ำท่วม: ${L.t} (${L.s})`:`แจ้งจุดคนหนาแน่น: ${r.place||""} ${L.t}`.trim(),
+    extra(r)?extra(r).replace(/&amp;/g,"&"):"",
+    r.note?`รายละเอียด: ${r.note}`:"",
+    `พื้นที่: อ.${r.amp} จ.ปทุมธานี`,
+    `พิกัด: ${r.lat}, ${r.lng}`,
+    `แผนที่: https://maps.google.com/?q=${r.lat},${r.lng}`,
+    `เวลา: ${when}${r.confirms?` (มีคนยืนยันแล้ว ${r.confirms} คน)`:""}`].filter(Boolean).join("\n");
+}
+function fwdBlock(r){return `<div class="fwd"><h4>ส่งต่อให้หน่วยงาน</h4>
+  <div>ข้อความแจ้งเหตุที่เตรียมไว้ให้:</div>
+  <textarea id="fwdTxt" readonly>${esc(fwdText(r))}</textarea>
+  <div class="row"><a class="primary" style="text-decoration:none" href="https://line.me/R/oaMessage/%401784DDPM/?${encodeURIComponent(fwdText(r))}" target="_blank" rel="noopener">ส่งให้ ปภ. ทาง LINE</a><button class="chip" type="button" id="fwdCopy">คัดลอกข้อความ</button><span class="t" id="fwdMsg"></span></div>
+  <div class="t">ปุ่มนี้จะเปิดแชต LINE ของ ปภ. (@1784DDPM) พร้อมข้อความที่กรอกไว้ให้แล้ว กดส่งในแชตอีกครั้งเดียวก็ถึงเจ้าหน้าที่ ถ้าแนบรูปไว้ ให้แนบรูปในแชตเพิ่มเอง</div>
+  <ul>
+    <li>ถ้าปุ่ม LINE ไม่ทำงาน ให้เพิ่มเพื่อน <b class="id">@1784DDPM</b> ใน LINE แล้ววางข้อความที่คัดลอกไว้</li>
+    <li>โทรสายด่วน ปภ. <b class="id">1784</b> แล้วอ่านพิกัดให้เจ้าหน้าที่ (ตลอด 24 ชม.)</li>
+    <li>ถ้ามีคนเจ็บหรือติดอยู่ โทร <b class="id">1669</b> ทันที</li>
+    <li><a href="https://www.traffy.in.th/?page_id=27351" target="_blank" rel="noopener">Traffy Fondue</a> ใช้แจ้งปัญหาเมืองกับเทศบาลที่เข้าร่วม</li>
+  </ul></div>`}
+document.addEventListener("click",async e=>{if(e.target.id!=="fwdCopy")return;const ta=$("#fwdTxt");try{await navigator.clipboard.writeText(ta.value);$("#fwdMsg").textContent="คัดลอกแล้ว"}catch{ta.focus();ta.select();$("#fwdMsg").textContent="กดค้างที่ข้อความแล้วเลือกคัดลอก"}});
+
+// ---- detail popup
+async function showDetail(id){
+  const r=[...real,...DEMO].find(x=>x.id===id);if(!r)return;
+  const L=r.kind==="flood"?FLOOD_LV[r.level]:CROWD_LV[r.level];
+  $("#mTitle").textContent=(r.kind==="flood"?"น้ำท่วม: ":"คนเยอะ: ")+L.t+(r.kind==="flood"?` (${L.s})`:"");
+  $("#mMeta").innerHTML=`อ.${esc(r.amp)} · ${ago(r.lastAt||r.at)}${r.confirms?` · มีคนยืนยัน ${r.confirms}`:""}${r.demo?' <span class="tag">ตัวอย่าง</span>':""}`;
+  $("#mBody").innerHTML=`${extra(r)?`<div>${extra(r)}</div>`:""}${r.place||r.note?`<div>${r.place?esc(r.place)+" · ":""}${esc(r.note||"")}</div>`:""}${r.hasPhoto?'<div class="t" id="mPh">กำลังโหลดรูปถ่าย…</div>':''}${sceneSVG(r)}${r.demo?"":fwdBlock(r)}`;
+  $("#modal").hidden=false;$("#mClose").focus();
+  if(r.hasPhoto){const src=await getPhoto(r.id);const ph=$("#mPh");if(!ph)return;if(src&&/^data:image\/(jpeg|png|webp);base64,/.test(src)){const im=new Image();im.alt="รูปจากผู้รายงาน";im.src=src;ph.replaceWith(im)}else ph.textContent="โหลดรูปไม่ได้"}
+}
+$("#mClose").onclick=()=>$("#modal").hidden=true;
+$("#modal").addEventListener("click",e=>{if(e.target.id==="modal")$("#modal").hidden=true});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")$("#modal").hidden=true});
+
+// ---- shared store
+let db=null, myId=null, readOnly=false;
+render();
+setInterval(render,60e3);
+(async()=>{
+  if(!window.firebase||FIREBASE_CONFIG.apiKey.startsWith("PASTE")){$("#hint").textContent="ยังไม่ได้ตั้งค่าฐานข้อมูล (firebaseConfig) ตอนนี้ดูได้แต่ข้อมูลตัวอย่าง";updateForm();return}
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const cred = await firebase.auth().signInAnonymously();
+    myId = cred.user.uid;
+    db = firebase.firestore();
+  }catch(err){$("#hint").textContent="เชื่อมต่อฐานข้อมูลไม่ได้ ลองรีเฟรชหน้า ("+(err.code||err.message)+")";updateForm();return}
+  updateForm();
+  db.collection("reports").orderBy("at","desc").limit(800).onSnapshot(s=>{
+    real=s.docs.map(d=>({id:d.id,...d.data()})).filter(r=>r&&(r.kind==="flood"||r.kind==="crowd")&&Number.isInteger(r.level)&&r.level>=1&&r.level<=MAXLV[r.kind]&&typeof r.lng==="number"&&typeof r.lat==="number");
+    render();
+  },err=>setMsg("โหลดรายงานไม่สำเร็จ ลองรีเฟรชหน้า ("+err.code+")",true));
+})();
+
+$("#f").addEventListener("submit",async e=>{
+  e.preventDefault();if(!pick||!db)return;
+  const f=e.target, kind=f.kind.value, level=+f.level.value;
+  const doc={kind,level,lng:pick.lng,lat:pick.lat,amp:pick.amp,note:$("#note").value.trim().slice(0,200),place:kind==="crowd"?$("#place").value:"",trend:kind==="flood"?(f.trend.value||""):"",car:kind==="flood"?(f.car.value||""):"",at:Date.now(),lastAt:Date.now(),confirms:0,by:myId||"",hasPhoto:!!photoData};
+  $("#send").disabled=true;setMsg("กำลังส่ง…");
+  try{const ref=db.collection("reports").doc();if(photoData){await db.collection("photos").doc(ref.id).set({img:photoData,at:Date.now(),by:myId||""})}await ref.set(doc);clearPhoto();setMsg("ส่งแล้ว ขอบคุณที่ช่วยรายงาน");if(!real.some(x=>x.id===ref.id))real=[{id:ref.id,...doc},...real];showDetail(ref.id);pick=null;drawPick();$("#note").value="";f.querySelectorAll("input[name=trend],input[name=car]").forEach(i=>i.checked=false);}
+  catch(err){if(err.code==="permission-denied")setMsg("ส่งไม่ได้ ข้อมูลไม่ครบหรือรูปใหญ่เกินไป",true);else if(err.code==="resource-exhausted")setMsg("ระบบรับรายงานเต็มชั่วคราว ลองใหม่ภายหลัง",true);else setMsg("ส่งไม่สำเร็จ ลองอีกครั้ง ("+err.code+")",true)}
+  updateForm();
+});
+$("#feed").addEventListener("click",async e=>{
+  if(e.target.dataset.photo){showDetail(e.target.dataset.photo);return}
+  const c=e.target.dataset.confirm, d=e.target.dataset.del; if(!db||(!c&&!d))return;
+  const r=real.find(x=>x.id===(c||d)); if(!r)return;
+  e.target.disabled=true;
+  try{ if(c) await db.collection("reports").doc(c).update({confirms:(r.confirms||0)+1,lastAt:Date.now()}); else{await db.collection("reports").doc(d).delete();if(r.hasPhoto)await db.collection("photos").doc(d).delete().catch(()=>{})} }
+  catch(err){setMsg("ทำรายการไม่สำเร็จ ("+err.code+")",true);e.target.disabled=false}
+});
+</script>
+
+</body>
+</html>
