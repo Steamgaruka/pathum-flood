@@ -132,6 +132,7 @@ textarea{min-height:56px;resize:vertical}
 .fwd .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .fwd ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
 .fwd b.id{user-select:all}
+.empty{position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px;text-align:center;max-width:min(320px,80%);pointer-events:none;box-shadow:0 2px 10px rgba(0,0,0,.08)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 @keyframes pulse{0%{r:6;opacity:.7}100%{r:22;opacity:0}}
 .pulse{animation:pulse 1.8s ease-out infinite}
@@ -172,6 +173,7 @@ textarea{min-height:56px;resize:vertical}
       </svg>
       <div class="zoom"><button id="zin" aria-label="ซูมเข้า">+</button><button id="zout" aria-label="ซูมออก">−</button><button id="zre" aria-label="ดูทั้งจังหวัด" style="font-size:13px">⤢</button></div>
       <div class="tip" id="tip"></div>
+      <div class="empty" id="empty" hidden></div>
       <div class="legend">
         <span>สีอำเภอ = ระดับน้ำสูงสุดที่มีคนรายงาน</span>
         <span><i class="sw" style="background:var(--w1)"></i>1 ต่ำกว่าข้อเท้า</span><span><i class="sw" style="background:var(--w2)"></i>2 ข้อเท้า-เข่า</span><span><i class="sw" style="background:var(--w3)"></i>3 เข่า-เอว</span><span><i class="sw" style="background:var(--w4)"></i>4 เอว-อก</span><span><i class="sw" style="background:var(--w5)"></i>5 อกขึ้นไป</span><span><i class="sw" style="background:var(--w6)"></i>6 มิดหัว</span>
@@ -350,7 +352,7 @@ function drawStations(list, live){
   const top=[...list].sort((a,b)=>(b.pct??-1)-(a.pct??-1)).slice(0,6);
   $("#stInfo").innerHTML = (live?`<b>สถานีวัดน้ำทางการ (ThaiWater สด, ${list.length} สถานีในปทุมฯ)</b>`:"<b>สถานีวัดน้ำทางการ (ค่าที่บันทึกไว้ ไม่ใช่ค่าสด)</b>")+"<br>"+top.map(s=>`${esc(s.name)} อ.${esc(s.amp)}: <b style="color:${SITCOL[s.level]||"inherit"}">${esc(s.status)}</b> · ${esc(s.at)}`).join("<br>");
 }
-drawStations(STATIONS,false);
+$("#stInfo").innerHTML="กำลังโหลดระดับน้ำจากสถานีทางการ (ThaiWater)…";
 (async()=>{
   try{
     const ctl=new AbortController();setTimeout(()=>ctl.abort(),15000);
@@ -363,11 +365,12 @@ drawStations(STATIONS,false);
       return {name:(st.tele_station_name&&st.tele_station_name.th)||"สถานีวัดน้ำ",amp:(g.amphoe_name&&g.amphoe_name.th)||"",lat:+st.tele_station_lat,lng:+st.tele_station_long,level:lv,pct,
         status:`${SIT[lv]||"ไม่ทราบสถานะ"}${pct!=null?` (${pct.toFixed(0)}% ของตลิ่ง)`:""}${d.waterlevel_msl?` ระดับน้ำ ${(+d.waterlevel_msl).toFixed(2)} ม.รทก.`:""}`,at:d.waterlevel_datetime||""}}).filter(s=>isFinite(s.lat)&&isFinite(s.lng));
     if(list.length)drawStations(list,true);
-  }catch(e){ /* blocked (CORS) or offline: keep the saved snapshot */ }
+    else $("#stInfo").innerHTML="ThaiWater ไม่มีข้อมูลสถานีในปทุมฯ ตอนนี้ ดูเพิ่มที่ thaiwater.net";
+  }catch(e){ $("#stInfo").innerHTML="ดึงระดับน้ำจากสถานีทางการไม่ได้ ดูค่าล่าสุดได้ที่ thaiwater.net"; }
 })();
 
 // ---- state
-let real=[], showDemo=true, layers={flood:true,crowd:true}, winH=24, pick=null;
+let real=[], showDemo=false, layers={flood:true,crowd:true}, winH=24, pick=null;
 const active = ()=>{const list = real.length? real : (showDemo? DEMO: []);const cut=Date.now()-winH*H;return list.filter(r=>(r.lastAt||r.at)>=cut)};
 const ago = t=>{const m=Math.round((Date.now()-t)/6e4);if(m<1)return"เมื่อสักครู่";if(m<60)return m+" นาทีที่แล้ว";const h=Math.round(m/60);return h<24? h+" ชม.ที่แล้ว": Math.round(h/24)+" วันที่แล้ว"};
 const wcol = l=>l?`var(--w${l})`:"var(--land)";
@@ -375,6 +378,7 @@ const wcol = l=>l?`var(--w${l})`:"var(--land)";
 function render(){
   const rs=active();
   $("#demoBanner").hidden = !( !real.length && showDemo );
+  const em=$("#empty");em.hidden=rs.length>0;if(!rs.length)em.innerHTML=`<b>ยังไม่มีรายงานใน ${winH>=72?"3 วัน":winH+" ชม."} ที่ผ่านมา</b><br>เห็นน้ำท่วมหรือคนเยอะตรงไหน แตะบนแผนที่เพื่อรายงานได้เลย`;
   // districts
   const by={};DISTRICTS.forEach(d=>by[d.th]={max:0,n:0,crowd:0,cmax:0});
   rs.forEach(r=>{const b=by[r.amp];if(!b)return;if(r.kind==="flood"){b.max=Math.max(b.max,r.level);b.n++;if(r.trend==="up")b.up=(b.up||0)+1}else{b.crowd++;b.cmax=Math.max(b.cmax,r.level)}});
@@ -524,7 +528,7 @@ let db=null, myId=null, readOnly=false;
 render();
 setInterval(render,60e3);
 (async()=>{
-  if(!window.firebase||FIREBASE_CONFIG.apiKey.startsWith("PASTE")){$("#hint").textContent="ยังไม่ได้ตั้งค่าฐานข้อมูล (firebaseConfig) ตอนนี้ดูได้แต่ข้อมูลตัวอย่าง";updateForm();return}
+  if(!window.firebase||FIREBASE_CONFIG.apiKey.startsWith("PASTE")){$("#hint").textContent="เชื่อมต่อฐานข้อมูลไม่ได้ ลองรีเฟรชหน้าหรือเช็กอินเทอร์เน็ต";updateForm();return}
   try{
     firebase.initializeApp(FIREBASE_CONFIG);
     const cred = await firebase.auth().signInAnonymously();
